@@ -1226,8 +1226,9 @@ def create_table_texture():
     return np.dstack([pm, (alpha * 255).astype(np.uint8)])
 
 
-DREAM_BG = create_dream_backdrop()
-TABLE_PM = create_table_texture()
+# Background image and table textures removed per request (clean void with sparkles/fairy lights)
+DREAM_BG = None
+TABLE_PM = None
 
 
 # ============================================================================
@@ -1526,29 +1527,18 @@ def draw_glass_rims(canvas, t, cam_rot, cam_target, cam_dist):
 
 
 def compose_background(t, cam_rot, cam_target, cam_dist, azimuth):
-    """Parallax garden backdrop + fairy lights + camera-locked wooden table."""
+    """Clean dark background + floating fairy lights & sparkles (no background image or table)."""
+    canvas = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+
     fsx, fsy, fz, _ = project_points(VASE_FOOT_WORLD[None, :], cam_rot, cam_target, cam_dist)
     fsx, fsy, fz = float(fsx[0]), float(fsy[0]), float(fz[0])
-    s = (FOV_SCALE / fz) / REF_PX_PER_UNIT
 
     bg_fade = 0.18 + 0.82 * float(smootherstep(0.0, 2.8, t))
-    sf = 1.0 + 0.30 * (s - 1.0)
     dx = -azimuth * 55.0
     dy = 0.14 * (fsy - FINAL_FOOT_SY)
-    M = np.array([[sf, 0, (1 - sf) * WIDTH / 2 + dx], [0, sf, (1 - sf) * HEIGHT / 2 + dy]], dtype=np.float32)
-    canvas = cv2.warpAffine(DREAM_BG, M, (WIDTH, HEIGHT), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-    canvas = cv2.convertScaleAbs(canvas, alpha=bg_fade)
-    canvas = draw_fairy_lights(canvas, t, dx * 1.6, dy * 1.2, bg_fade)
 
-    tf = float(smootherstep(0.2, 2.4, t))
-    M2 = np.array([[s, 0, fsx - s * TABLE_FOOT[0]], [0, s, fsy - s * TABLE_FOOT[1]]], dtype=np.float32)
-    warped = cv2.warpAffine(TABLE_PM, M2, (WIDTH, HEIGHT), flags=cv2.INTER_LINEAR,
-                            borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-    y0 = int(max(0, fsy - s * (TABLE_FOOT[1] - TABLE_BACK) - 40))
-    a = warped[y0:, :, 3].astype(np.float32)[..., None] / 255.0 * tf
-    pm = warped[y0:, :, :3].astype(np.float32) * tf
-    roi = canvas[y0:].astype(np.float32)
-    canvas[y0:] = np.clip(roi * (1.0 - a) + pm, 0, 255).astype(np.uint8)
+    # Draw fairy lights & sparkles against the clean background
+    canvas = draw_fairy_lights(canvas, t, dx * 1.6, dy * 1.2, bg_fade)
     return canvas
 
 
